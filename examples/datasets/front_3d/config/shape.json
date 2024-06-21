@@ -1,0 +1,191 @@
+[
+    {
+    "synsetId": "02773838",
+    "name": "bag,traveling bag,travelling bag,grip,suitcase",
+        "children": [
+            "03986949"
+        ],
+    "numInstances": 83
+    },
+    {
+    "synsetId": "02801938",
+    "name": "basket,handbasket",
+        "children": [
+            "03482405",
+            "04582349"
+        ],
+    "numInstances": 113
+    },
+    {
+    "synsetId": "02876657",
+    "name": "bottle",
+        "children": [
+            "02823428",
+            "03359566",
+            "03603722",
+            "03923379",
+            "03983396",
+            "04591713"
+        ],
+    "numInstances": 498
+    },
+    {
+        "synsetId": "02880940",
+        "name": "bowl",
+        "children": [
+          "04263257"
+        ],
+        "numInstances": 186
+      },
+      {
+        "synsetId": "04263257",
+        "name": "soup bowl",
+        "children": [],
+        "numInstances": 3
+      },
+      {
+        "synsetId": "02946921",
+        "name": "can,tin,tin can",
+        "children": [
+          "02823510",
+          "04255586"
+        ],
+        "numInstances": 108
+      },
+      {
+        "synsetId": "02823510",
+        "name": "beer can",
+        "children": [],
+        "numInstances": 11
+      },
+      {
+        "synsetId": "04255586",
+        "name": "soda can",
+        "children": [],
+        "numInstances": 73
+      },
+      {
+        "synsetId": "02954340",
+        "name": "cap",
+        "children": [
+          "02799323",
+          "03049924",
+          "03610682",
+          "04387095"
+        ],
+        "numInstances": 56
+      },
+      {
+        "synsetId": "03046257",
+        "name": "clock",
+        "children": [
+          "02694662",
+          "03909406",
+          "04548280"
+        ],
+        "numInstances": 651
+      },
+      {
+        "synsetId": "03085013",
+        "name": "computer keyboard,keypad",
+        "children": [],
+        "numInstances": 65
+      },
+      {
+        "synsetId": "03085602",
+        "name": "computer screen,computer display",
+        "children": [],
+        "numInstances": 173
+      },
+      {
+        "synsetId": "03261776",
+        "name": "earphone,earpiece,headphone,phone",
+        "children": [],
+        "numInstances": 73
+      },
+      {
+        "synsetId": "03467517",
+        "name": "guitar",
+        "children": [
+          "02676566"
+        ],
+        "numInstances": 797
+      },
+      {
+        "synsetId": "03513137",
+        "name": "helmet",
+        "children": [
+          "03379051",
+          "03492922",
+          "04265428"
+        ],
+        "numInstances": 162
+      },
+      {
+        "synsetId": "03593526",
+        "name": "jar",
+        "children": [
+          "04522168"
+        ],
+        "numInstances": 596
+      },
+      {
+        "synsetId": "03642806",
+        "name": "laptop,laptop computer",
+        "children": [],
+        "numInstances": 460
+      },
+      {
+        "synsetId": "03797390",
+        "name": "mug",
+        "children": [
+          "02824058",
+          "03063599"
+        ],
+        "numInstances": 214
+      },
+      {
+        "synsetId": "03938244",
+        "name": "pillow",
+        "children": [],
+        "numInstances": 96
+      },
+      {
+        "synsetId": "03948459",
+        "name": "pistol,handgun,side arm,shooting iron",
+        "children": [
+          "04086273"
+        ],
+        "numInstances": 307
+      },
+      {
+        "synsetId": "03991062",
+        "name": "pot,flowerpot",
+        "children": [
+          "03957315"
+        ],
+        "numInstances": 602
+      },
+      {
+        "synsetId": "04074963",
+        "name": "remote control,remote",
+        "children": [],
+        "numInstances": 66
+      },
+      {
+        "synsetId": "04401088",
+        "name": "telephone,phone,telephone set",
+        "children": [
+          "03179910",
+          "03488438",
+          "04044498"
+        ],
+        "numInstances": 1089
+      },
+      {
+        "synsetId": "04591713",
+        "name": "wine bottle",
+        "children": [],
+        "numInstances": 140
+      }
+]
