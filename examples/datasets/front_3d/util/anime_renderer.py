@@ -1,5 +1,6 @@
 import numpy as np
 from mathutils import Vector
+from mathutils import Matrix, Vector, Euler
 import bmesh
 import bpy
 import mathutils
@@ -36,6 +37,62 @@ class AnimeRenderer:
         self.offset_data = offset_data
         self.vert_data = vert_data
 
+        self.init_location = None
+        self.cam_location = None
+        self.random_offsets = None
+        self.update_origin()
+    
+    def generate_random_offsets(self, min_distance =1.4):
+        num_frames = self.offset_data.shape[0]
+        random_offsets = np.zeros((num_frames, 3))
+        for i in range(num_frames):
+            attempts = 0
+            valid_offset_found = False
+            while attempts < 100:
+                random_location_offset = np.random.uniform(-1.1, 1.1, (2))
+                new_location = self.init_location[:2] + random_location_offset
+                distance = np.linalg.norm(new_location - self.cam_location[:2])
+                if distance > min_distance:
+                    valid_offset_found = True
+                    break
+                attempts += 1
+            if not valid_offset_found:
+                random_location_offset = np.random.uniform(-0.8, 0.8, (2))
+
+            random_rotation_offset = np.random.uniform(-np.pi, np.pi, (1))
+            random_offsets[i] = np.concatenate((random_location_offset, random_rotation_offset), axis=0)
+        print('generating offset ', len(random_offsets))
+        return random_offsets
+
+    def get_location(self, fid=None):
+        if fid == None:
+            return self.the_mesh.location
+        random_offset = self.random_offsets[fid]
+        ran_loc = [random_offset[0], random_offset[1], 0]
+        new_location = self.init_location + Vector(ran_loc)
+        if new_location[2] > 1.8:
+            new_location[2] = 1.8
+        return new_location
+
+    def update_origin(self):
+        # Update the origin to the geometry's center
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.context.view_layer.objects.active = self.the_mesh
+        self.the_mesh.select_set(True)
+        bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_VOLUME')
+        bpy.context.view_layer.update()
+
+    def setInitLocation(self, location, cam_location):
+        self.update_origin()
+        location[2] = np.array(self.the_mesh.location)[2]
+        self.the_mesh.location = location
+        self.init_location = location
+        self.cam_location = cam_location
+        self.random_offsets = self.generate_random_offsets()
+
+    def get_offset(self, fid):
+        src_offset = self.offset_data[fid]
+        return src_offset
 
     def vis_frame(self, fid):
         # 更新动画模型的位置
@@ -50,6 +107,16 @@ class AnimeRenderer:
             bm.verts[i].co = new_co
         bm.to_mesh(self.the_mesh.data)
         bm.free()
+        random_offset = self.random_offsets[fid]
+        ran_loc = [random_offset[0], random_offset[1], 0]
+        rotation_matrix = Matrix.Rotation(random_offset[2], 4, 'Z')
+        new_location = self.init_location + Vector(ran_loc)
+        if new_location[2] > 1.8:
+            new_location[2] = 1.8
+        self.update_origin()
+        self.the_mesh.location = new_location
+        self.the_mesh.rotation_euler = Euler((0, 0, 0), 'XYZ')
+        self.the_mesh.rotation_euler.rotate(rotation_matrix)
         return src_offset
 
 
@@ -104,9 +171,9 @@ class MultiAnimeRenderer:
     def __init__(self, anime_files):
         self.renderers = [AnimeRenderer(anime_file) for anime_file in anime_files]
     
-    def set_location(self, locations):
+    def set_init_location(self, locations, cam_location):
         for i, renderer in enumerate(self.renderers):
-            renderer.the_mesh.location = locations[i]
+            renderer.setInitLocation(locations[i], cam_location)
         
     def get_frames(self):
         frames = []

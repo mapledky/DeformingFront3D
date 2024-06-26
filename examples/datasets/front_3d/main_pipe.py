@@ -33,7 +33,7 @@ def batch_render_scenes_with_animations(front_paths, future_folder, output_dir, 
         except Exception as e:
             print(f"Failed to render {front_path}: {e}")
 
-def sample_anime(anime_folder, json_file, number=10):
+def sample_anime(anime_folder, json_file, number=10, animals=False):
     # 读取JSON文件中需要排除的动画路径
     with open(json_file, 'r') as f:
         excluded_paths = set(json.load(f))
@@ -42,8 +42,8 @@ def sample_anime(anime_folder, json_file, number=10):
     for root, dirs, files in os.walk(anime_folder):
         for file in files:
             if file.endswith(".anime"):
-                if not ('bunny' in str(file).lower() or 'canie' in str(file).lower() or 'cat' in str(file).lower() or \
-                    'chicken' in str(file).lower() or 'doggie' in str(file).lower() or 'duck' in str(file).lower() or \
+                if animals and not ('bunny' in str(file).lower() or 'canie' in str(file).lower() or \
+                    'chicken' in str(file).lower() or 'doggie' in str(file).lower() or \
                         'fox' in str(file).lower() or 'huskydog' in str(file).lower() or 'rabbit' in str(file).lower()):
                     continue
                 full_path = os.path.join(root, file)
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     #front_files num set to 1，more files rendering is troublesome 
     front_files = sample_scene(args.front_folder, 1)
     anime_files = sample_anime(args.anime_folder, args.dt4_json, 30)
-    anime_files_animals = sample_anime(args.anime_folder_animals, args.dt4_json, 48)
+    anime_files_animals = sample_anime(args.anime_folder_animals, args.dt4_json, 48, animals=True)
 
     print(str(len(front_files)) + ' front3D scene choosed')
     print(str(len(anime_files)) + ' anime_files choosed')

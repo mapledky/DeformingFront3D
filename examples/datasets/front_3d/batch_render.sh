@@ -1,6 +1,6 @@
 front_folder="dataset/3D-FRONT"
 future_folder="dataset/3D-FUTURE-model"
-output_dir="dataset/3D-Deforming-FRONT-v4"
+output_dir="dataset/3D-Deforming-FRONT-v3"
 anime_folder="dataset/DeformingThings4D/humanoids"
 shapenet_folder="dataset/ShapeNetCore.v2"
 shapenet_json="code/BlenderProc/examples/datasets/front_3d/config/shape.json"
@@ -28,7 +28,7 @@ NUM_EXECUTIONS=$1
 #     echo "convert depth to point"
     
 # done
-for ((i=0; i<10000; i++)); do
+for ((i=0; i<1000; i++)); do
     echo "Executing Python script: run $((i+1))"
     blenderproc run code/BlenderProc/examples/datasets/front_3d/main_pipe.py "$front_folder" "$future_folder" "$output_dir" "$anime_folder" "$shapenet_folder" "$shapenet_json" "$dt4_json" "$anime_folder_animals"
     echo "convert depth to point"

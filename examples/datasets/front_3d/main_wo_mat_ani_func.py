@@ -94,7 +94,7 @@ def render_scenes_with_animations(front_path,
     bproc.renderer.enable_depth_output(activate_antialiasing=False)
     bproc.renderer.set_max_amount_of_samples(96)
 
-    distance_from_cam = 2.25
+    distance_from_cam = 2.3
     
     print(str(anime_number)+' anime to be render')
     for index, anime_file in enumerate(anime_files):
@@ -125,20 +125,16 @@ def render_scenes_with_animations(front_path,
         # Initialize animation renderer
         anime_renderer = AnimeRenderer(anime_file)
         num_frames = anime_renderer.offset_data.shape[0]
-        anime_renderer.the_mesh.location = model_location
-        
-
+        anime_renderer.setInitLocation(model_location, cam_location)
         if multi:
             cam_loc_tem = cam_location
             cam_loc_tem[2] = 0.0
             multi_model_location = sample_points(model_location, cam_loc_tem)
             multi_anime_renderer = MultiAnimeRenderer(multi_anime_files)
-            multi_anime_renderer.set_location(multi_model_location)
+            multi_anime_renderer.set_init_location(multi_model_location, cam_location)
             multi_num_frames = multi_anime_renderer.get_frames()
 
         anim_flow_skip = flow_skip
-
-        frame_num = None
 
         pre_frame = None
         pre_pc = None
@@ -149,31 +145,34 @@ def render_scenes_with_animations(front_path,
         pre_cam_info = None
         pre_offset = None
         
+        pre_frame_num = None
         pre_multi_frame = [0, 0]
-        neglect_first = 0
-        neglect_out_of_range = 0
-        neglect_serious_burden = 0
 
+        neglect_proportion = 0
+        neglect_overlap = 0
         for frame in range(0, num_frames, anim_flow_skip):
-            if neglect_first >=5 or neglect_out_of_range >= 5 or neglect_serious_burden >= 5:
-                break
+            if neglect_proportion >= 5 or neglect_overlap >= 5:break
             frame = frame + random.randint(1, anim_flow_skip)
             multi_frame = [0, 0]
             if multi:
-                multi_frame[0] =  min(pre_multi_frame[0] + anim_flow_skip + random.randint(2, anim_flow_skip) , multi_num_frames[0] - 1)
-                multi_frame[1] =  min(pre_multi_frame[1] + anim_flow_skip + random.randint(2, anim_flow_skip) , multi_num_frames[1] - 1)
+                frame_1 = pre_multi_frame[0] + anim_flow_skip + random.randint(2, anim_flow_skip)
+                if frame_1 > multi_num_frames[0] - 1:frame_1 = 0
+                frame_2 = pre_multi_frame[1] + anim_flow_skip + random.randint(2, anim_flow_skip)
+                if frame_2 > multi_num_frames[1] - 1:frame_2 = 0
+                multi_frame[0] =  frame_1
+                multi_frame[1] =  frame_2
             
             if(frame >= num_frames):break
-            offset = anime_renderer.vis_frame(frame)
+            offset = anime_renderer.get_offset(frame)
 
             if pre_frame != None:
                 offset_similarity = compute_frame_offset_similarity(offset, pre_offset)
-                if offset_similarity < 0.26 or math.isnan(offset_similarity):
+                if offset_similarity < 0.23 or math.isnan(offset_similarity):
                     print('neglect offset______',str(offset_similarity),' !!!!!!')
                     continue
             
-            center_location = model_location + Vector(offset.mean(axis=0)) + Vector((0, 0, 1.15))
-
+            #center_location = model_location + Vector(offset.mean(axis=0)) + Vector((0, 0, 1.15))
+            center_location = anime_renderer.get_location(frame)
             cam2world_matrix = getcameralocation(center_location, cam_location)
             # #check obstacle
             # obstacle_checks = {"min": 0.5, "avg": {"min": 2.0, "max": 10}, "no_background": True}
@@ -194,11 +193,12 @@ def render_scenes_with_animations(front_path,
             data_back = bproc.renderer.render()
 
             anime_renderer.visible_anim()
+            anime_renderer.vis_frame(frame)
             data_ow_anim = bproc.renderer.render()
             proportion = compare_depth_maps(data_back, data_ow_anim)
             frame_output_dir = output_dir
             if proportion < 0.10:
-                neglect_out_of_range += 1
+                neglect_proportion += 1
                 print("anim out of range !!!!!!!")
                 continue
             if proportion < 0.25:
@@ -206,24 +206,22 @@ def render_scenes_with_animations(front_path,
             elif proportion < 0.45:
                 frame_output_dir = os.path.join(output_dir, 'pro40')
             else:
+                neglect_proportion += 1
                 print("too big proportion !!!!!!!")
                 continue
-            
-            neglect_out_of_range = 0
+            neglect_proportion = 0
             #render full scene
             movingshapenet.visible_all()
             furniture_manager.visible_all()
             if multi:
                 multi_anime_renderer.visible_anim()
 
-            data_wo_anim = None
             if pre_frame != None:
-                anime_renderer.vis_frame(frame_num)
+                anime_renderer.vis_frame(pre_frame_num)
                 data_wo_anim = bproc.renderer.render()
             anime_renderer.vis_frame(frame)
-
             # moving shapenet around human and moving furniture around human randomly
-            movingshapenet.moving(Vector(offset.mean(axis=0)))
+            movingshapenet.moving()
             furniture_manager.randommoving(Matrix(cam2world_matrix).to_translation())
             if multi:
                 multi_anime_renderer.vis_frame(multi_frame)
@@ -240,14 +238,13 @@ def render_scenes_with_animations(front_path,
                 back_indices = compute_back_indice(data, data_back)
                 pointcloud, back_indices = depth2pointcloud(data.get('depth'), cam_info, indices=back_indices)
                 #pointcloud_wo_fore = pointcloud[back_indices]
-                if pointcloud.shape[0] < 6000:
-                    neglect_first += 1
+                if pointcloud.shape[0] < 3000:
                     print("neglect serious burden or enormous of first frame!!!!")
                     continue
                 pre_pc = pointcloud
                 pre_back_indices = back_indices
                 pre_pc_wo_fore = pointcloud[back_indices]
-                frame_num = frame
+                pre_frame_num = frame
                 pre_offset = offset
                 pre_frame = data
                 pre_cam_info = cam_info
@@ -266,8 +263,7 @@ def render_scenes_with_animations(front_path,
 
             point_cloud_target_wo_anim, _ = depth2pointcloud(data_wo_anim.get('depth'), cam_info)
 
-            if point_cloud_target.shape[0] < 6000:
-                neglect_serious_burden += 1
+            if point_cloud_target.shape[0] < 3000:
                 print("neglect serious burden or enormous!!!!")
                 furniture_manager.last_location()
                 movingshapenet.last_location()
@@ -275,31 +271,31 @@ def render_scenes_with_animations(front_path,
                     multi_anime_renderer.vis_frame(pre_multi_frame)
                 continue
             
-            neglect_serious_burden = 0
             #check pointcloud overlap
-            overlap_ratio = compute_overlap(pre_pc_wo_fore, point_cloud_target_wo_fore)
-            if overlap_ratio < 0.1:
-                print('neglect overlap ratio ' , str(overlap_ratio), ' !!!')
+            overlap_ratio_pc1, overlap_ratio_pc2 = compute_overlap(pre_pc_wo_fore, point_cloud_target_wo_fore)
+            if overlap_ratio_pc1 < 0.1 or overlap_ratio_pc2 < 0.1:
+                print('neglect too small overlap ratio !!!')
+                neglect_overlap += 1
                 furniture_manager.last_location()
                 movingshapenet.last_location()
                 if multi:
                     multi_anime_renderer.vis_frame(pre_multi_frame)
                 continue
-            elif overlap_ratio > 0.7:
-                print('neglect too big overlap ratio ' , str(overlap_ratio), ' !!!')
+            elif overlap_ratio_pc1 > 0.7 and overlap_ratio_pc2 > 0.7:
+                print('neglect too big overlap ratio !!!')
                 furniture_manager.last_location()
                 movingshapenet.last_location()
                 if multi:
                     multi_anime_renderer.vis_frame(pre_multi_frame)
                 continue
-            elif overlap_ratio < 0.3:
+            elif overlap_ratio_pc1 < 0.3 and overlap_ratio_pc1 < 0.3:
                 frame_output_dir = os.path.join(frame_output_dir, 'low')
             else:
                 frame_output_dir = os.path.join(frame_output_dir, 'high')
 
             frame_output_dir = os.path.join(frame_output_dir, str(int(time.time() * 1000)))
             os.makedirs(frame_output_dir, exist_ok=True)
-
+            neglect_overlap = 0
             gt_output_dir = os.path.join(frame_output_dir, 'relative_transform.npy')
             # src_cam_ouput_dir = os.path.join(frame_output_dir, 'src_cam.json')
             # ref_cam_ouput_dir = os.path.join(frame_output_dir, 'ref_cam.json')
@@ -334,7 +330,7 @@ def render_scenes_with_animations(front_path,
             save_point_cloud_to_pcd(transpoint(point_cloud_target, relative_transform),frame_output_dir_ref )
             #save_point_cloud_to_pcd(transpoint(point_cloud_target_wo_anim, relative_transform),frame_output_dir_ref_wo_anim )
 
-            frame_num = frame
+            pre_frame_num = frame
             pre_cam_info = cam_info
             pre_frame = data
             pre_offset = offset

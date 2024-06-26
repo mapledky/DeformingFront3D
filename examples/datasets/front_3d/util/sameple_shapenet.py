@@ -45,8 +45,7 @@ def sample_shapenet_obj(loaded_objects, shapenet_json, shapenet_path, sample_num
                 shapenet_paths.append((synset_id, used_source_id))
 
     # Randomly select 50 model IDs
-    random.shuffle(shapenet_paths)
-    selected_shapenet_models = shapenet_paths[:sample_number]
+  
 
     sample_surface_objects = [obj for obj in loaded_objects if "table" in obj.get_name().lower() 
                               or "stool" in obj.get_name().lower() or "chair" in obj.get_name().lower() 
@@ -56,18 +55,20 @@ def sample_shapenet_obj(loaded_objects, shapenet_json, shapenet_path, sample_num
     sample_surface_cabinet = [obj for obj in loaded_objects if "cabinet" in obj.get_name().lower()] 
 
     random.shuffle(sample_surface_objects)
-    sample_surface_objects = sample_surface_objects[:min(50, int(len(sample_surface_objects) / 2))]
+    sample_surface_objects = sample_surface_objects[:min(20, int(len(sample_surface_objects)))]
 
 
     random.shuffle(sample_surface_cabinet)
-    sample_surface_cabinet = sample_surface_cabinet[:min(50, int(len(sample_surface_cabinet) / 2))]
+    sample_surface_cabinet = sample_surface_cabinet[:min(20, int(len(sample_surface_cabinet)))]
     sample_surface_objects.extend(sample_surface_cabinet)
 
     print("************************* sample surface  furniture" + str(len(sample_surface_objects)))
 
-    if len(sample_surface_objects) < 20:
+    if len(sample_surface_objects) < 10:
         return False
     for obj in sample_surface_objects:
+        random.shuffle(shapenet_paths)
+        selected_shapenet_models = shapenet_paths[:sample_number]
         with bproc.utility.UndoAfterExecution():
             print("_________ sample on  " + str(obj.get_name()))
             choose_models = selected_shapenet_models
@@ -112,7 +113,7 @@ def sample_shapenet_obj(loaded_objects, shapenet_json, shapenet_path, sample_num
             surface_obj.enable_rigidbody(False)
 
             # Run the physics simulation
-            bproc.object.simulate_physics_and_fix_final_poses(min_simulation_time=1, max_simulation_time=3, check_object_interval=1)
+            bproc.object.simulate_physics_and_fix_final_poses(min_simulation_time=1, max_simulation_time=2, check_object_interval=1)
             
     return True
 
@@ -121,12 +122,12 @@ class FurnitureManage:
         self.loaded_objects = loaded_objects
         self.initial_positions = {}
         self.last_positions = []
-        self.target_furniture = [obj for obj in loaded_objects if any(x in obj.get_name().lower() for x in ['chair', 'stool', 'cabinet'])]
+        self.target_furniture = [obj for obj in loaded_objects if any(x in obj.get_name().lower() for x in ['chair', 'stool'])]
         print('manage the location of ',str(len(self.target_furniture)))
         for obj in self.target_furniture:
             self.initial_positions[obj] = obj.get_location().copy()
     
-    def randommoving(self, camera_location, movingnumber=10,min_distance=1.1, max_distance = 5.0):
+    def randommoving(self, camera_location, movingnumber=10,min_distance=1.3, max_distance = 5.0):
         self.clear_moving()
         if not self.target_furniture:
             print("No target furniture to move.")
@@ -141,7 +142,7 @@ class FurnitureManage:
         for obj in moving_furniture:
             # Calculate a random offset
             while True:
-                offset = Vector((random.uniform(-1, 1), random.uniform(-1, 1), 0))  # only move in x and y directions
+                offset = Vector((random.uniform(-1.2, 1.2), random.uniform(-1.2, 1.2), 0))  # only move in x and y directions
                 new_loc = obj.get_location() + offset
                 distance = np.linalg.norm(new_loc - cam_loc)
                 if min_distance <= distance <= max_distance:
@@ -238,14 +239,14 @@ class MovingShapenetModels:
         # 应用缩放
         obj.set_scale([scale_factor, scale_factor, scale_factor])
 
-    def sample_position_near_model(self, model_location, camera_location, radius=3.5, distance_to_camera=1.4): 
+    def sample_position_near_model(self, model_location, camera_location, radius=3.0, distance_to_camera=1.1): 
         while True:
             random_angle = np.random.uniform(0, 2 * np.pi)
             random_distance = np.random.uniform(0.2, radius)
             x_offset = random_distance * np.cos(random_angle)
             y_offset = random_distance * np.sin(random_angle)
 
-            z_offset = np.random.uniform(0.1, 1.1)
+            z_offset = np.random.uniform(0.1, 2.0)
 
             sample_position = model_location + np.array([x_offset, y_offset, z_offset])
             
@@ -255,7 +256,7 @@ class MovingShapenetModels:
         return Vector(sample_position)
 
 
-    def moving(self, offset=(0, 0, 0), random_factor=1.0, distance_to_camera = 1.2):
+    def moving(self,  random_factor=1.2, distance_to_camera = 1.3):
         # Adjust the number of models to move (random number)
         num_models_to_move = random.randint(int(len(self.loaded_objects) / 2), len(self.loaded_objects))
 
@@ -273,7 +274,7 @@ class MovingShapenetModels:
                 np.random.uniform(-random_factor, random_factor),
                 np.random.uniform(-random_factor, random_factor)
             ])
-            new_location = init_location + np.array(offset) + random_offset
+            new_location = init_location + random_offset
 
             if np.linalg.norm(new_location - self.camera_location) < distance_to_camera:
                 continue
@@ -281,11 +282,16 @@ class MovingShapenetModels:
             # Ensure the model's height is not below ground
             if new_location[2] < 0.1:
                 new_location[2] = 0.1
-            if new_location[2] > 1.1:
-                new_location[2] = 1.1
+            if new_location[2] > 2.0:
+                new_location[2] = 2.0
             
             obj.set_location(new_location)
-            obj.set_rotation_euler(bproc.sampler.uniformSO3())
+            min_angle_rad = np.deg2rad(-30)
+            max_angle_rad = np.deg2rad(30)
+            rotation_angles = np.random.uniform(min_angle_rad, max_angle_rad, size=3)
+            obj.set_rotation_euler((0, 0, 0))
+            obj.set_rotation_euler(rotation_angles)
+            #obj.set_rotation_euler(bproc.sampler.uniformSO3())
             bpy.context.view_layer.update()
 
     def delete_all_model(self):

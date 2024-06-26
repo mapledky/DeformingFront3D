@@ -71,28 +71,27 @@ def getcameralocation(center_location, camera_location, pitch_range=(-7.5, 7.5),
     new_camera_location = camera_location + Vector(random_offset)
     if new_camera_location[2] >1.8:
         new_camera_location[2] = 1.8
-    elif new_camera_location[2] <1.15:
-        new_camera_location[2] = 1.15
-    if center_location[2] > 1.7:
-        center_location[2] = 1.7
-    elif center_location[2] < 0.7:
-        center_location[2] = 0.7
+    elif new_camera_location[2] <1.0:
+        new_camera_location[2] = 1.0
+    if center_location[2] > 1.8:
+        center_location[2] = 1.8
+
     cam_rot = look_at(new_camera_location, center_location)
     
-    # add ramdom pitch and yaw
-    pitch = np.random.uniform(np.radians(pitch_range[0]), np.radians(pitch_range[1]))
-    yaw = np.random.uniform(np.radians(yaw_range[0]), np.radians(yaw_range[1]))
+    # # add ramdom pitch and yaw
+    # pitch = np.random.uniform(np.radians(pitch_range[0]), np.radians(pitch_range[1]))
+    # yaw = np.random.uniform(np.radians(yaw_range[0]), np.radians(yaw_range[1]))
 
-    pitch_matrix = Matrix.Rotation(pitch, 3, 'X')
-    yaw_matrix = Matrix.Rotation(yaw, 3, 'Z')
+    # pitch_matrix = Matrix.Rotation(pitch, 3, 'X')
+    # yaw_matrix = Matrix.Rotation(yaw, 3, 'Z')
 
-    cam_rot = yaw_matrix @ pitch_matrix @ cam_rot
+    # cam_rot = yaw_matrix @ pitch_matrix @ cam_rot
 
     cam2world_matrix = bproc.math.build_transformation_mat(new_camera_location, cam_rot)
     
     return cam2world_matrix
 
-def compute_overlap(pc1, pc2, voxel_size=0.1):
+def compute_overlap(pc1, pc2, voxel_size=0.0375):
     def voxelize(pc, voxel_size):
         voxel_grid = np.floor(pc / voxel_size).astype(np.int32)
         return voxel_grid
@@ -104,9 +103,9 @@ def compute_overlap(pc1, pc2, voxel_size=0.1):
     set_pc2 = set(map(tuple, voxel_pc2))
     
     intersection = set_pc1 & set_pc2
-    union = set_pc1 | set_pc2
+    #union = set_pc1 | set_pc2
     
-    overlap = len(intersection) / len(union)
-    
-    return overlap
+    overlap_pc1 = len(intersection) / len(set_pc1)
+    overlap_pc2 = len(intersection) / len(set_pc2)
+    return overlap_pc1, overlap_pc2
 
