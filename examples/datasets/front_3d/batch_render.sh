@@ -1,6 +1,6 @@
 front_folder="dataset/3D-FRONT"
 future_folder="dataset/3D-FUTURE-model"
-output_dir="dataset/3D-Deforming-FRONT-v3"
+output_dir="dataset/3D-Deforming-FRONT-v4"
 anime_folder="dataset/DeformingThings4D/humanoids"
 shapenet_folder="dataset/ShapeNetCore.v2"
 shapenet_json="code/BlenderProc/examples/datasets/front_3d/config/shape.json"

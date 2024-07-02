@@ -111,8 +111,8 @@ class AnimeRenderer:
         ran_loc = [random_offset[0], random_offset[1], 0]
         rotation_matrix = Matrix.Rotation(random_offset[2], 4, 'Z')
         new_location = self.init_location + Vector(ran_loc)
-        if new_location[2] > 1.8:
-            new_location[2] = 1.8
+        if new_location[2] > 1.6:
+            new_location[2] = 1.6
         self.update_origin()
         self.the_mesh.location = new_location
         self.the_mesh.rotation_euler = Euler((0, 0, 0), 'XYZ')
@@ -194,7 +194,7 @@ class MultiAnimeRenderer:
             renderer.visible_anim()
 import numpy as np
 
-def sample_points(center, camera_location, radius=2.5, min_distance=0.5, num_points=2, distance_to_camera=2.8):
+def sample_points(center, camera_location, radius=2.3, min_distance=0.8, num_points=2, distance_to_camera=2.8):
     points = []
     attempts = 0
     max_attempts = 1000  # 防止无限循环

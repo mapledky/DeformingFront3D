@@ -19,6 +19,10 @@ from util.sameple_shapenet import sample_shapenet_obj, MovingShapenetModels, Fur
 from util.tools import check_name, compare_depth_maps,compute_back_indice, getcameralocation,compute_overlap, compute_frame_offset_similarity
 from util.pointcloud_tools import compute_rt, depth2pointcloud, save_point_cloud_to_numpy_and_pcd, transpoint, save_point_cloud_to_pcd
 
+def save_blend(file_path):
+    os.makedirs(file_path, exist_ok=True)
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(file_path))
+
 def render_scenes_with_animations(front_path,
                                    future_folder, 
                                    output_dir, 
@@ -27,7 +31,7 @@ def render_scenes_with_animations(front_path,
                                    shapenet_folder,
                                    shapenet_json="",
                                    shapenet_number=5,
-                                   moving_shapenet_number=30,#30
+                                   moving_shapenet_number=25,#30
                                    flow_skip=4):
     bproc.init()
     output_dir = os.path.join(output_dir, "rawdata")
@@ -120,6 +124,10 @@ def render_scenes_with_animations(front_path,
         #place shapenet models in front of camera
         movingshapenet = MovingShapenetModels(model_location,cam_location, shapenet_json, shapenet_folder, moving_shapenet_number)
         bpy.context.view_layer.update()
+        #init_furniture_cam
+        cam_loc_tem = cam_location
+        cam_loc_tem[2] = 0.0
+        furniture_manager.set_cam_loc(cam_loc_tem)
 
         print("anime render")
         # Initialize animation renderer
@@ -150,6 +158,8 @@ def render_scenes_with_animations(front_path,
 
         neglect_proportion = 0
         neglect_overlap = 0
+
+        pre_wo = True
         for frame in range(0, num_frames, anim_flow_skip):
             if neglect_proportion >= 5 or neglect_overlap >= 5:break
             frame = frame + random.randint(1, anim_flow_skip)
@@ -197,14 +207,17 @@ def render_scenes_with_animations(front_path,
             data_ow_anim = bproc.renderer.render()
             proportion = compare_depth_maps(data_back, data_ow_anim)
             frame_output_dir = output_dir
-            if proportion < 0.10:
-                neglect_proportion += 1
-                print("anim out of range !!!!!!!")
-                continue
-            if proportion < 0.25:
-                frame_output_dir = os.path.join(output_dir, 'pro25')
+            if proportion < 0.15:
+                if pre_wo and pre_frame != None:
+                    neglect_proportion += 1
+                    print("anim out of range !!!!!!!")
+                    continue
+                frame_output_dir = os.path.join(output_dir, 'wo')
             elif proportion < 0.45:
-                frame_output_dir = os.path.join(output_dir, 'pro40')
+                if pre_wo:
+                    frame_output_dir = os.path.join(output_dir, 'wo')
+                else:
+                    frame_output_dir = os.path.join(output_dir, 'wi')
             else:
                 neglect_proportion += 1
                 print("too big proportion !!!!!!!")
@@ -222,7 +235,7 @@ def render_scenes_with_animations(front_path,
             anime_renderer.vis_frame(frame)
             # moving shapenet around human and moving furniture around human randomly
             movingshapenet.moving()
-            furniture_manager.randommoving(Matrix(cam2world_matrix).to_translation())
+            furniture_manager.randommoving()
             if multi:
                 multi_anime_renderer.vis_frame(multi_frame)
 
@@ -241,6 +254,8 @@ def render_scenes_with_animations(front_path,
                 if pointcloud.shape[0] < 3000:
                     print("neglect serious burden or enormous of first frame!!!!")
                     continue
+                if not proportion < 0.15:
+                    pre_wo = False
                 pre_pc = pointcloud
                 pre_back_indices = back_indices
                 pre_pc_wo_fore = pointcloud[back_indices]
@@ -273,7 +288,7 @@ def render_scenes_with_animations(front_path,
             
             #check pointcloud overlap
             overlap_ratio_pc1, overlap_ratio_pc2 = compute_overlap(pre_pc_wo_fore, point_cloud_target_wo_fore)
-            if overlap_ratio_pc1 < 0.1 or overlap_ratio_pc2 < 0.1:
+            if overlap_ratio_pc1 < 0.1 and overlap_ratio_pc2 < 0.1:
                 print('neglect too small overlap ratio !!!')
                 neglect_overlap += 1
                 furniture_manager.last_location()
@@ -300,15 +315,22 @@ def render_scenes_with_animations(front_path,
             # src_cam_ouput_dir = os.path.join(frame_output_dir, 'src_cam.json')
             # ref_cam_ouput_dir = os.path.join(frame_output_dir, 'ref_cam.json')
             src_pcd_back_indices = os.path.join(frame_output_dir, 'src_back_indices.json')
+            ref_pcd_back_indices = os.path.join(frame_output_dir, 'ref_back_indices.json')
+
             np.save(gt_output_dir, relative_transform)
 
             src_back_indices = {
             "back_indices": np.array(pre_back_indices).tolist()
             }
+            ref_back_indices = {
+            "back_indices": np.array(back_indices).tolist()
+            }
 
             with open(src_pcd_back_indices, 'w', encoding='utf-8') as f:
                 json.dump(src_back_indices, f, ensure_ascii=False, indent=4)
 
+            with open(ref_pcd_back_indices, 'w', encoding='utf-8') as f:
+                json.dump(ref_back_indices, f, ensure_ascii=False, indent=4)
 
             save_numpy_as_image(np.array(pre_frame.get('normals')).squeeze(), frame_output_dir, 'src.png')
             save_numpy_as_image(np.array(data.get('normals')).squeeze(), frame_output_dir, 'ref.png')
@@ -317,7 +339,7 @@ def render_scenes_with_animations(front_path,
             # frame_output_dir_src_wo = os.path.join(frame_output_dir, 'src_wo_fore')
 
             #save_point_cloud_to_pcd(pre_pc_wo_fore,frame_output_dir_src_wo)
-            save_point_cloud_to_pcd(pre_pc,frame_output_dir_src )
+            #save_point_cloud_to_pcd(pre_pc,frame_output_dir_src )
 
             frame_output_dir_ref = os.path.join(frame_output_dir, 'ref')
             frame_output_dir_ref_wo_anim = os.path.join(frame_output_dir, 'ref_wo_anim')
@@ -327,9 +349,14 @@ def render_scenes_with_animations(front_path,
             save_point_cloud_to_numpy_and_pcd(transpoint(point_cloud_target, relative_transform),frame_output_dir_ref )
             save_point_cloud_to_numpy_and_pcd(transpoint(point_cloud_target_wo_anim, relative_transform),frame_output_dir_ref_wo_anim )
 
-            save_point_cloud_to_pcd(transpoint(point_cloud_target, relative_transform),frame_output_dir_ref )
+            #save_point_cloud_to_pcd(transpoint(point_cloud_target, relative_transform),frame_output_dir_ref )
             #save_point_cloud_to_pcd(transpoint(point_cloud_target_wo_anim, relative_transform),frame_output_dir_ref_wo_anim )
 
+            #save_blend(os.path.join(frame_output_dir, 'ref.blend'))
+            if proportion < 0.15:
+                pre_wo = True
+            else:
+                pre_wo = False
             pre_frame_num = frame
             pre_cam_info = cam_info
             pre_frame = data

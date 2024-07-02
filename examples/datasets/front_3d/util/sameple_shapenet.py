@@ -120,6 +120,7 @@ def sample_shapenet_obj(loaded_objects, shapenet_json, shapenet_path, sample_num
 class FurnitureManage:
     def __init__(self, loaded_objects):
         self.loaded_objects = loaded_objects
+        self.cam_location = None
         self.initial_positions = {}
         self.last_positions = []
         self.target_furniture = [obj for obj in loaded_objects if any(x in obj.get_name().lower() for x in ['chair', 'stool'])]
@@ -127,12 +128,15 @@ class FurnitureManage:
         for obj in self.target_furniture:
             self.initial_positions[obj] = obj.get_location().copy()
     
-    def randommoving(self, camera_location, movingnumber=10,min_distance=1.3, max_distance = 5.0):
+    def set_cam_loc(self, camera_location):
+        self.cam_location = camera_location
+    
+    def randommoving(self, movingnumber=5,min_distance=1.5, max_distance = 5.0):
         self.clear_moving()
         if not self.target_furniture:
             print("No target furniture to move.")
             return
-        cam_loc = Vector(camera_location)
+        cam_loc = Vector(self.cam_location)
          # Find furniture close to the camera
         nearby_furniture = [obj for obj in self.target_furniture if np.linalg.norm(obj.get_location() - cam_loc) <= max_distance]
         
@@ -239,7 +243,7 @@ class MovingShapenetModels:
         # 应用缩放
         obj.set_scale([scale_factor, scale_factor, scale_factor])
 
-    def sample_position_near_model(self, model_location, camera_location, radius=3.0, distance_to_camera=1.1): 
+    def sample_position_near_model(self, model_location, camera_location, radius=2.35, distance_to_camera=1.5): 
         while True:
             random_angle = np.random.uniform(0, 2 * np.pi)
             random_distance = np.random.uniform(0.2, radius)
@@ -256,7 +260,7 @@ class MovingShapenetModels:
         return Vector(sample_position)
 
 
-    def moving(self,  random_factor=1.2, distance_to_camera = 1.3):
+    def moving(self,  random_factor=1.2, distance_to_camera = 1.5):
         # Adjust the number of models to move (random number)
         num_models_to_move = random.randint(int(len(self.loaded_objects) / 2), len(self.loaded_objects))
 

@@ -71,10 +71,10 @@ def getcameralocation(center_location, camera_location, pitch_range=(-7.5, 7.5),
     new_camera_location = camera_location + Vector(random_offset)
     if new_camera_location[2] >1.8:
         new_camera_location[2] = 1.8
-    elif new_camera_location[2] <1.0:
-        new_camera_location[2] = 1.0
-    if center_location[2] > 1.8:
-        center_location[2] = 1.8
+    elif new_camera_location[2] <1.1:
+        new_camera_location[2] = 1.1
+    if center_location[2] > 1.6:
+        center_location[2] = 1.6
 
     cam_rot = look_at(new_camera_location, center_location)
     
