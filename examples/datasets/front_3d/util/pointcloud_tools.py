@@ -24,7 +24,7 @@ def transpoint(pc, gt_trans):
     return pc
 
 
-def depth2pointcloud(depth, cam_info, voxel_size=0.025, min_clip=0.5, max_clip=6.0, indices=[]):
+def depth2pointcloud(config, depth, cam_info, indices=[]):
 
     if isinstance(depth, list):
         depth = np.array(depth)
@@ -39,7 +39,7 @@ def depth2pointcloud(depth, cam_info, voxel_size=0.025, min_clip=0.5, max_clip=6
     rows, cols = depth.shape
     c, r = np.meshgrid(np.arange(cols), np.arange(rows), sparse=True)
     # Valid depths are defined by the camera clipping planes
-    valid = (depth > min_clip) & (depth < max_clip)
+    valid = (depth > config.render_d2p_min_clip) & (depth < config.render_d2p_max_clip)
     # Negate Z (the camera Z is at the opposite)
     z = -np.where(valid, depth, np.nan)
     # z = -np.where(valid, depth, 10)
@@ -58,7 +58,7 @@ def depth2pointcloud(depth, cam_info, voxel_size=0.025, min_clip=0.5, max_clip=6
     valid_indices = np.arange(depth.size).reshape(-1)[valid]
     #[1,2,3,....] depthmap index after depth crop
     pc = (matrix[:3, :3] @ pc.T).T + matrix[:3, 3][None, :]
-    voxel_indices = np.round(pc / voxel_size).astype(int)
+    voxel_indices = np.round(pc / config.render_d2p_voxel_size).astype(int)
     voxel_pointcloud_dict = {}
     voxel_indices_dict = {}#voxel之后的坐标对应原来的depth图中的二维坐标
     for i, idx in enumerate(voxel_indices):
@@ -89,7 +89,7 @@ def depth2pointcloud(depth, cam_info, voxel_size=0.025, min_clip=0.5, max_clip=6
     else:
         mapped_indices = []
     # Remove flat areas from voxel_pointcloud
-    updated_voxel_pointcloud, updated_indices = remove_flat_areas(voxel_pointcloud, mapped_indices)
+    updated_voxel_pointcloud, updated_indices = remove_flat_areas(voxel_pointcloud, mapped_indices, area_size=config.render_d2p_flat_area)
     return updated_voxel_pointcloud, updated_indices
 
 def augment_point_cloud(points, aug_noise=0.008):

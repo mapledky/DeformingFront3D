@@ -21,8 +21,9 @@ def anime_read(filename):
     return nf, nv, nt, vert_data, face_data, offset_data
 
 class AnimeRenderer:
-    def __init__(self, anime_file):
+    def __init__(self,config, anime_file):
         _, _, _, vert_data, face_data, offset_data = anime_read(anime_file)
+        self.config = config
         offset_data = np.concatenate([np.zeros((1, offset_data.shape[1], offset_data.shape[2])), offset_data], axis=0)
         vertices = vert_data.tolist()
         edges = []
@@ -42,24 +43,35 @@ class AnimeRenderer:
         self.random_offsets = None
         self.update_origin()
     
-    def generate_random_offsets(self, min_distance =1.4):
+    def generate_random_offsets(self):
         num_frames = self.offset_data.shape[0]
         random_offsets = np.zeros((num_frames, 3))
+        config = self.config
         for i in range(num_frames):
             attempts = 0
             valid_offset_found = False
+            mv_dis_min = config.render_anim_moving_dis_min
+            mv_dis_max = config.render_anim_moving_dis_max
             while attempts < 100:
-                random_location_offset = np.random.uniform(-1.1, 1.1, (2))
+                intervals = [(-mv_dis_max, -mv_dis_min), (mv_dis_min, mv_dis_max)]
+                chosen_interval = np.random.choice([0, 1])
+                lower, upper = intervals[chosen_interval]
+                random_location_offset = np.random.uniform(lower, upper, (2)) 
                 new_location = self.init_location[:2] + random_location_offset
                 distance = np.linalg.norm(new_location - self.cam_location[:2])
-                if distance > min_distance:
+                if distance > config.render_anim_moving_dis_to_cam:
                     valid_offset_found = True
                     break
                 attempts += 1
             if not valid_offset_found:
-                random_location_offset = np.random.uniform(-0.8, 0.8, (2))
+                intervals = [(-mv_dis_max, -mv_dis_min), (mv_dis_min, mv_dis_max)]
+                chosen_interval = np.random.choice([0, 1])
+                lower, upper = intervals[chosen_interval]
+                random_location_offset = np.random.uniform(lower, upper, (2)) 
 
-            random_rotation_offset = np.random.uniform(-np.pi, np.pi, (1))
+            min_angle_rad = np.deg2rad(-config.render_anim_moving_rot)
+            max_angle_rad = np.deg2rad(config.render_anim_moving_rot)
+            random_rotation_offset = np.random.uniform(min_angle_rad, max_angle_rad, (1))
             random_offsets[i] = np.concatenate((random_location_offset, random_rotation_offset), axis=0)
         print('generating offset ', len(random_offsets))
         return random_offsets
@@ -70,8 +82,8 @@ class AnimeRenderer:
         random_offset = self.random_offsets[fid]
         ran_loc = [random_offset[0], random_offset[1], 0]
         new_location = self.init_location + Vector(ran_loc)
-        if new_location[2] > 1.8:
-            new_location[2] = 1.8
+        if new_location[2] > self.config.render_anim_moving_max_h:
+            new_location[2] = self.config.render_anim_moving_max_h
         return new_location
 
     def update_origin(self):
@@ -111,8 +123,8 @@ class AnimeRenderer:
         ran_loc = [random_offset[0], random_offset[1], 0]
         rotation_matrix = Matrix.Rotation(random_offset[2], 4, 'Z')
         new_location = self.init_location + Vector(ran_loc)
-        if new_location[2] > 1.6:
-            new_location[2] = 1.6
+        if new_location[2] > self.config.render_anim_moving_max_h:
+            new_location[2] = self.config.render_anim_moving_max_h
         self.update_origin()
         self.the_mesh.location = new_location
         self.the_mesh.rotation_euler = Euler((0, 0, 0), 'XYZ')
@@ -168,8 +180,8 @@ class AnimeRenderer:
 
 
 class MultiAnimeRenderer:
-    def __init__(self, anime_files):
-        self.renderers = [AnimeRenderer(anime_file) for anime_file in anime_files]
+    def __init__(self,config, anime_files):
+        self.renderers = [AnimeRenderer(config, anime_file) for anime_file in anime_files]
     
     def set_init_location(self, locations, cam_location):
         for i, renderer in enumerate(self.renderers):
@@ -194,25 +206,25 @@ class MultiAnimeRenderer:
             renderer.visible_anim()
 import numpy as np
 
-def sample_points(center, camera_location, radius=2.3, min_distance=0.8, num_points=2, distance_to_camera=2.8):
+def sample_points(config, center, camera_location):
     points = []
     attempts = 0
     max_attempts = 1000  # 防止无限循环
 
-    while len(points) < num_points and attempts < max_attempts:
+    while len(points) < 2 and attempts < max_attempts:
         # 随机采样一个点，固定z坐标
-        random_point = center[:2] + np.random.uniform(-radius, radius, 2)
+        random_point = center[:2] + np.random.uniform(-config.multi_anim_dis_to_center, config.multi_anim_dis_to_center, 2)
         random_point = np.append(random_point, center[2])
         
         # 检查点是否在圆柱体内
-        if np.linalg.norm(random_point[:2] - center[:2]) <= radius:
+        if np.linalg.norm(random_point[:2] - center[:2]) <= config.multi_anim_dis_to_center:
             # 检查新点与已有点之间的距离和与camera_location的距离
-            if all(np.linalg.norm(random_point[:2] - p[:2]) >= min_distance for p in points) and np.linalg.norm(random_point - camera_location) > distance_to_camera:
+            if all(np.linalg.norm(random_point[:2] - p[:2]) >= config.multi_anim_min_dis for p in points) and np.linalg.norm(random_point - camera_location) > config.multi_anim_dis_to_cam:
                 points.append(random_point)
         
         attempts += 1
 
-    if len(points) < num_points:
+    if len(points) < 2:
         raise ValueError("无法在指定的尝试次数内找到满足条件的点")
 
     return points

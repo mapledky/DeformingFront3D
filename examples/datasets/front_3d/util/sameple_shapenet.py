@@ -24,7 +24,7 @@ def scale_object_to_size(obj, max_size):
 
 
 
-def sample_shapenet_obj(loaded_objects, shapenet_json, shapenet_path, sample_number = 3, furniture_max=40):
+def sample_shapenet_obj(config, loaded_objects, shapenet_json, shapenet_path):
     if not os.path.exists(shapenet_json) or  not os.path.exists(shapenet_path):
         raise OSError("One of the necessary files or folders does not exist!")
     with open(shapenet_json, 'r') as f:
@@ -55,20 +55,20 @@ def sample_shapenet_obj(loaded_objects, shapenet_json, shapenet_path, sample_num
     sample_surface_cabinet = [obj for obj in loaded_objects if "cabinet" in obj.get_name().lower()] 
 
     random.shuffle(sample_surface_objects)
-    sample_surface_objects = sample_surface_objects[:min(20, int(len(sample_surface_objects)))]
+    sample_surface_objects = sample_surface_objects[:min(config.sample_on_normal_furniture, int(len(sample_surface_objects)))]
 
 
     random.shuffle(sample_surface_cabinet)
-    sample_surface_cabinet = sample_surface_cabinet[:min(20, int(len(sample_surface_cabinet)))]
+    sample_surface_cabinet = sample_surface_cabinet[:min(config.sample_on_cabinet, int(len(sample_surface_cabinet)))]
     sample_surface_objects.extend(sample_surface_cabinet)
 
     print("************************* sample surface  furniture" + str(len(sample_surface_objects)))
 
-    if len(sample_surface_objects) < 10:
+    if len(sample_surface_objects) < config.min_sample:
         return False
     for obj in sample_surface_objects:
         random.shuffle(shapenet_paths)
-        selected_shapenet_models = shapenet_paths[:sample_number]
+        selected_shapenet_models = shapenet_paths[:config.sample_shapenet_num]
         with bproc.utility.UndoAfterExecution():
             print("_________ sample on  " + str(obj.get_name()))
             choose_models = selected_shapenet_models
@@ -95,7 +95,7 @@ def sample_shapenet_obj(loaded_objects, shapenet_json, shapenet_path, sample_num
             for synset_id, used_source_id in choose_models:
                 # Load the ShapeNet object, which should be sampled on the surface
                 shapenet_obj = bproc.loader.load_shapenet(shapenet_path, used_synset_id=synset_id, used_source_id=used_source_id)
-                scale_object_to_size(shapenet_obj, max_size=0.35)
+                scale_object_to_size(shapenet_obj, max_size=config.sample_obj_size)
                 dropped_objects = bproc.object.sample_poses_on_surface([shapenet_obj], surface_obj, sample_pose,
                                                                     min_distance=0.1, max_distance=10,
                                                                     check_all_bb_corners_over_surface=False)
@@ -118,7 +118,8 @@ def sample_shapenet_obj(loaded_objects, shapenet_json, shapenet_path, sample_num
     return True
 
 class FurnitureManage:
-    def __init__(self, loaded_objects):
+    def __init__(self, config, loaded_objects):
+        self.config = config
         self.loaded_objects = loaded_objects
         self.cam_location = None
         self.initial_positions = {}
@@ -131,29 +132,27 @@ class FurnitureManage:
     def set_cam_loc(self, camera_location):
         self.cam_location = camera_location
     
-    def randommoving(self, movingnumber=5,min_distance=1.5, max_distance = 5.0):
+    def randommoving(self):
+        config = self.config
         self.clear_moving()
         if not self.target_furniture:
             print("No target furniture to move.")
             return
         cam_loc = Vector(self.cam_location)
          # Find furniture close to the camera
-        nearby_furniture = [obj for obj in self.target_furniture if np.linalg.norm(obj.get_location() - cam_loc) <= max_distance]
-        
-        # If there are less furniture than movingnumber, we only move the available ones
-        moving_furniture = random.sample(nearby_furniture, min(movingnumber, len(nearby_furniture)))
-
-        for obj in moving_furniture:
+        nearby_furniture = [obj for obj in self.target_furniture if np.linalg.norm(obj.get_location() - cam_loc) <= config.render_furniture_nearby_thrs]
+        offset = config.render_furniture_nearby_loc_off
+        for obj in nearby_furniture:
             # Calculate a random offset
             while True:
-                offset = Vector((random.uniform(-1.2, 1.2), random.uniform(-1.2, 1.2), 0))  # only move in x and y directions
+                offset = Vector((random.uniform(-offset, offset), random.uniform(-offset, offset), 0))  # only move in x and y directions
                 new_loc = obj.get_location() + offset
                 distance = np.linalg.norm(new_loc - cam_loc)
-                if min_distance <= distance <= max_distance:
+                if config.render_furniture_nearby_to_cam <= distance <= config.render_furniture_nearby_thrs:
                     break
             
             obj.set_location(new_loc)
-        print('moving furniture number ', len(moving_furniture))
+        print('moving furniture number ', len(nearby_furniture))
         bpy.context.view_layer.update()  
 
     def set_last(self):
@@ -185,14 +184,14 @@ class FurnitureManage:
         bpy.context.view_layer.update()
 
 class MovingShapenetModels:
-    def __init__(self, model_location,camera_location, shapenet_json, shapenet_path, sample_number=3):
+    def __init__(self,config, model_location,camera_location, shapenet_json, shapenet_path):
         self.model_location = np.array(model_location)
         self.camera_location = np.array(camera_location)
         self.shapenet_path = shapenet_path
-        self.sample_number = sample_number
+        self.sample_number = config.random_shapenet
         self.loaded_objects = []
         self.last_locations = []
-        
+        self.config = config
 
         if not os.path.exists(shapenet_json) or  not os.path.exists(shapenet_path):
                 raise OSError("One of the necessary files or folders does not exist!")
@@ -215,11 +214,11 @@ class MovingShapenetModels:
 
         # Randomly select 50 model IDs
         random.shuffle(shapenet_paths)
-        selected_shapenet_models = shapenet_paths[:sample_number]
+        selected_shapenet_models = shapenet_paths[:config.random_shapenet]
         for synset_id, used_source_id in selected_shapenet_models:
             # Load the ShapeNet object, which should be sampled on the surface
             shapenet_obj = bproc.loader.load_shapenet(shapenet_path, used_synset_id=synset_id, used_source_id=used_source_id)
-            self.scale_object_to_size(shapenet_obj, max_size=0.35)
+            self.scale_object_to_size(shapenet_obj, max_size=config.random_shapenet_size)
             position = self.sample_position_near_model(self.model_location, self.camera_location)
             shapenet_obj.set_location(position)
             self.loaded_objects.append(shapenet_obj)
@@ -243,55 +242,53 @@ class MovingShapenetModels:
         # 应用缩放
         obj.set_scale([scale_factor, scale_factor, scale_factor])
 
-    def sample_position_near_model(self, model_location, camera_location, radius=2.35, distance_to_camera=1.5): 
+    def sample_position_near_model(self,model_location, camera_location): 
+        config = self.config
         while True:
             random_angle = np.random.uniform(0, 2 * np.pi)
-            random_distance = np.random.uniform(0.2, radius)
+            random_distance = np.random.uniform(0, config.random_shapenet_radius)
             x_offset = random_distance * np.cos(random_angle)
             y_offset = random_distance * np.sin(random_angle)
 
-            z_offset = np.random.uniform(0.1, 2.0)
+            z_offset = np.random.uniform(config.random_shapenet_min_h, config.random_shapenet_max_h)
 
             sample_position = model_location + np.array([x_offset, y_offset, z_offset])
             
-            if np.linalg.norm(sample_position - camera_location) > distance_to_camera:
+            if np.linalg.norm(sample_position - camera_location) > config.random_shapenet_dis_to_cam:
                 break
         
         return Vector(sample_position)
 
 
-    def moving(self,  random_factor=1.2, distance_to_camera = 1.5):
+    def moving(self):
+        config = self.config
         # Adjust the number of models to move (random number)
-        num_models_to_move = random.randint(int(len(self.loaded_objects) / 2), len(self.loaded_objects))
-
-        # Randomly select indices of models to move
-        indices_to_move = random.sample(range(len(self.loaded_objects)), num_models_to_move)
-
+        num_models_to_move = len(self.loaded_objects)
         # Adjust the position of selected models
-        for i in indices_to_move:
+        for i in range(num_models_to_move):
             obj = self.loaded_objects[i]
             init_location = self.obj_location[i]
             
             # Add randomness to the offset
             random_offset = np.array([
-                np.random.uniform(-random_factor, random_factor),
-                np.random.uniform(-random_factor, random_factor),
-                np.random.uniform(-random_factor, random_factor)
+                np.random.uniform(-config.render_shapenet_moving_dis, config.render_shapenet_moving_dis),
+                np.random.uniform(-config.render_shapenet_moving_dis, config.render_shapenet_moving_dis),
+                np.random.uniform(-config.render_shapenet_moving_dis, config.render_shapenet_moving_dis)
             ])
             new_location = init_location + random_offset
 
-            if np.linalg.norm(new_location - self.camera_location) < distance_to_camera:
+            if np.linalg.norm(new_location - self.camera_location) < config.render_shapenet_moving_dis_to_cam:
                 continue
             
             # Ensure the model's height is not below ground
-            if new_location[2] < 0.1:
-                new_location[2] = 0.1
-            if new_location[2] > 2.0:
-                new_location[2] = 2.0
+            if new_location[2] < config.random_shapenet_min_h:
+                new_location[2] = config.random_shapenet_min_h
+            if new_location[2] > config.random_shapenet_max_h:
+                new_location[2] = config.random_shapenet_max_h
             
             obj.set_location(new_location)
-            min_angle_rad = np.deg2rad(-30)
-            max_angle_rad = np.deg2rad(30)
+            min_angle_rad = np.deg2rad(-15)
+            max_angle_rad = np.deg2rad(15)
             rotation_angles = np.random.uniform(min_angle_rad, max_angle_rad, size=3)
             obj.set_rotation_euler((0, 0, 0))
             obj.set_rotation_euler(rotation_angles)

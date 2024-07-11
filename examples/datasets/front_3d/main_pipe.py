@@ -6,6 +6,7 @@ import datetime
 import sys
 import random
 import json
+import yaml
 
 sys.path.append('code/BlenderProc/examples/datasets/front_3d')
 
@@ -17,11 +18,10 @@ code/BlenderProc/examples/datasets/front_3d/batch_render.sh 1
 """
 
 
-def batch_render_scenes_with_animations(front_paths, future_folder, output_dir, anime_files,
+def batch_render_scenes_with_animations(config, front_paths, future_folder, output_dir, anime_files,
                                         shapenet_folder, 
                                         shapenet_json,
                                         anime_files_animals,
-                                        shapenet_number=5,
                                         flow_skip=4):
     count = 0
     for front_path in front_paths:
@@ -29,16 +29,14 @@ def batch_render_scenes_with_animations(front_paths, future_folder, output_dir, 
         print("---------------------------------------------------------")
         print("construct " + str(count) + " scene")
         try:
-            render_scenes_with_animations(front_path, future_folder, output_dir, anime_files,anime_files_animals, shapenet_folder, shapenet_json=shapenet_json, shapenet_number=shapenet_number, flow_skip=flow_skip)
+            render_scenes_with_animations(config, front_path, future_folder, output_dir, anime_files,anime_files_animals, shapenet_folder, shapenet_json=shapenet_json, flow_skip=flow_skip)
         except Exception as e:
             print(f"Failed to render {front_path}: {e}")
 
 def sample_anime(anime_folder, json_file, number=10, animals=False):
-    # 读取JSON文件中需要排除的动画路径
     with open(json_file, 'r') as f:
         excluded_paths = set(json.load(f))
     anime_files = []
-    # 遍历文件夹，查找所有.anime文件
     for root, dirs, files in os.walk(anime_folder):
         for file in files:
             if file.endswith(".anime"):
@@ -49,10 +47,8 @@ def sample_anime(anime_folder, json_file, number=10, animals=False):
                 full_path = os.path.join(root, file)
                 if str(root) not in excluded_paths:
                     anime_files.append(full_path)
-    
-    # 随机打乱并选择指定数量的动画文件
+
     print('ramdom animes number '+ str(len(anime_files)))
-    #177
     random.shuffle(anime_files)
     selected = anime_files[:number]
     
@@ -65,32 +61,32 @@ def sample_scene(scene_folder, number=1):
     print(selected)
     return selected
 
+class Config:
+    def __init__(self, config_dict):
+        for key, value in config_dict.items():
+            setattr(self, key, value)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("front_folder", default="dataset/3D-FRONT", help="Path to the folder containing 3D front files")
-    parser.add_argument("future_folder", default="dataset/3D-FUTURE-model", help="Path to the 3D Future Model folder.")
-    parser.add_argument("output_dir",default="code/BlenderProc/examples/datasets/front_3d/output", help="Path to where the data should be saved")
-    parser.add_argument("anime_folder",default="dataset/DeformingThings4D/humanoids", help="Path to the folder containing animation files")
-    parser.add_argument("shapenet_folder",default="dataset/", help="Path to the folder containing shapenet files")  
-    parser.add_argument("shapenet_json",default="dataset/", help="Path to the folder containing shapenet json")  
-    parser.add_argument("dt4_json",default="dataset/", help="Path to the folder containing dt4 json")  
-    parser.add_argument("anime_folder_animals",default="dataset/DeformingThings4D/animals", help="Path to the folder containing deforming animals") 
-    parser.add_argument("--flow_skip", type=int, default=4, help="Frame skip interval for animation")
+    parser.add_argument("config",default="code/BlenderProc/examples/datasets/front_3d/config/deformingfront.yaml", help="Path to the folder containing config")  
     args = parser.parse_args()
 
+    with open(args.config,'r') as f:
+        config = yaml.load(f, Loader=yaml.Loader)
+    
+    config = Config(config)
     #front_files num set to 1，more files rendering is troublesome 
-    front_files = sample_scene(args.front_folder, 1)
-    anime_files = sample_anime(args.anime_folder, args.dt4_json, 30)
-    anime_files_animals = sample_anime(args.anime_folder_animals, args.dt4_json, 48, animals=True)
+    front_files = sample_scene(config.front_folder)
+    anime_files = sample_anime(config.anime_folder, config.dt4_json, config.anime_per_scene)
+    anime_files_animals = sample_anime(config.anime_folder_animals, config.dt4_json, config.random_animals, animals=True)
 
     print(str(len(front_files)) + ' front3D scene choosed')
     print(str(len(anime_files)) + ' anime_files choosed')
     print(str(len(anime_files_animals)) + ' anime_files_animals choosed')
 
-    batch_render_scenes_with_animations(front_files, args.future_folder, args.output_dir,
+    batch_render_scenes_with_animations(config, front_files, config.future_folder, config.output_dir,
                                         anime_files, 
-                                        args.shapenet_folder, 
-                                        args.shapenet_json,
+                                        config.shapenet_folder, 
+                                        config.shapenet_json,
                                         anime_files_animals,
-                                        shapenet_number=7,
-                                        flow_skip=args.flow_skip)
+                                        flow_skip=config.flow_skip)

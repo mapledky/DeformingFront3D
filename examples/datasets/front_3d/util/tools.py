@@ -66,15 +66,15 @@ def compute_frame_offset_similarity(offset, pre_offset):
     return average_offset_distance
 
 
-def getcameralocation(center_location, camera_location, pitch_range=(-7.5, 7.5), yaw_range=(-5.5, 5.5), location_offset_range=0.35):
-    random_offset = np.random.uniform(-location_offset_range, location_offset_range, size=3)
+def getcameralocation(config, center_location, camera_location):
+    random_offset = np.random.uniform(-config.render_cam_random_loc_off, config.render_cam_random_loc_off, size=3)
     new_camera_location = camera_location + Vector(random_offset)
     if new_camera_location[2] >1.8:
         new_camera_location[2] = 1.8
-    elif new_camera_location[2] <1.1:
-        new_camera_location[2] = 1.1
-    if center_location[2] > 1.6:
-        center_location[2] = 1.6
+    elif new_camera_location[2] <1.2:
+        new_camera_location[2] = 1.2
+    if center_location[2] > config.render_anim_moving_max_h:
+        center_location[2] = config.render_anim_moving_max_h
 
     cam_rot = look_at(new_camera_location, center_location)
     
