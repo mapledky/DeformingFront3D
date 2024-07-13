@@ -13,19 +13,19 @@ flow_skip: 4
 anime_per_scene: 36
 random_animals: 96
 
-camera_to_furniture: 1.5
+camera_to_furniture: 1.3
 sample_camera_loc: 12
 
 render_width: 640
 render_height: 480
 render_samples: 128
 
-anim_distance_to_camera: 1.8
+anim_distance_to_camera: 2.0
 multi_anime: 1
 
 #furniture_sample_surface
-sample_shapenet_num: 5
-sample_on_normal_furniture: 25
+sample_shapenet_num: 7
+sample_on_normal_furniture: 20
 sample_on_cabinet: 20
 min_sample: 10
 sample_obj_size: 0.35
@@ -50,23 +50,23 @@ render_proportion_min: 0.1
 render_proportion_mid: 0.3
 render_proportion_max: 0.5
 
-render_anim_moving_dis_max: 0.2
+render_anim_moving_dis_max: 0.5
 render_anim_moving_dis_min: 0.1
 render_anim_moving_dis_to_cam: 1.1
-render_anim_moving_rot: 15
-render_anim_moving_max_h: 1.6
+render_anim_moving_rot: 30
+render_anim_moving_max_h: 1.3
 
-render_shapenet_moving_dis: 0.1
+render_shapenet_moving_dis: 0.2
 render_shapenet_moving_dis_to_cam: 1.3
 
-render_furniture_nearby_thrs: 4.5
+render_furniture_nearby_thrs: 6.0
 render_furniture_nearby_loc_off: 0.2
 render_furniture_nearby_to_cam: 1.3
 
 render_d2p_min_clip: 0.3
-render_d2p_max_clip: 5.5
+render_d2p_max_clip: 6.0
 render_d2p_voxel_size: 0.025
-render_d2p_flat_area: 2.4
+render_d2p_flat_area: 1.35
 
 render_min_points: 3000
 render_overlap_min: 0.1

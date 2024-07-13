@@ -287,7 +287,7 @@ def render_scenes_with_animations(config, front_path,
                 if multi:
                     multi_anime_renderer.vis_frame(pre_multi_frame)
                 continue
-            elif overlap_ratio_pc1 < 0.3 and overlap_ratio_pc1 < 0.3:
+            elif overlap_ratio_pc1 < 0.25 and overlap_ratio_pc1 < 0.25:
                 frame_output_dir = os.path.join(frame_output_dir, 'low')
             else:
                 frame_output_dir = os.path.join(frame_output_dir, 'high')
@@ -323,7 +323,7 @@ def render_scenes_with_animations(config, front_path,
             # frame_output_dir_src_wo = os.path.join(frame_output_dir, 'src_wo_fore')
 
             #save_point_cloud_to_pcd(pre_pc_wo_fore,frame_output_dir_src_wo)
-            #save_point_cloud_to_pcd(pre_pc,frame_output_dir_src )
+            save_point_cloud_to_pcd(pre_pc,frame_output_dir_src )
 
             frame_output_dir_ref = os.path.join(frame_output_dir, 'ref')
             frame_output_dir_ref_wo_anim = os.path.join(frame_output_dir, 'ref_wo_anim')
@@ -333,7 +333,7 @@ def render_scenes_with_animations(config, front_path,
             save_point_cloud_to_numpy_and_pcd(transpoint(point_cloud_target, relative_transform),frame_output_dir_ref )
             save_point_cloud_to_numpy_and_pcd(transpoint(point_cloud_target_wo_anim, relative_transform),frame_output_dir_ref_wo_anim )
 
-            #save_point_cloud_to_pcd(transpoint(point_cloud_target, relative_transform),frame_output_dir_ref )
+            save_point_cloud_to_pcd(transpoint(point_cloud_target, relative_transform),frame_output_dir_ref )
             #save_point_cloud_to_pcd(transpoint(point_cloud_target_wo_anim, relative_transform),frame_output_dir_ref_wo_anim )
 
             #save_blend(os.path.join(frame_output_dir, 'ref.blend'))

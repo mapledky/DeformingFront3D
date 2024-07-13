@@ -176,7 +176,7 @@ def remove_flat_areas(voxel_pointcloud, mapped_indices, area_size=2.4):
         neighborhood_points = voxel_pointcloud[indices]
         if is_flat_area(neighborhood_points):
             # 删除一半的点云
-            half_indices = indices[:len(indices) // 2]
+            half_indices = indices[:len(indices) - (len(indices) // 3)]
             points_to_remove.update(half_indices)
         
         processed_indices.update(indices)
