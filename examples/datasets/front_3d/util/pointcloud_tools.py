@@ -4,6 +4,8 @@ import blenderproc as bproc
 import math
 from sklearn.neighbors import NearestNeighbors, KDTree
 import json
+import random
+from scipy.spatial.transform import Rotation
 
 
 def compute_rt(cam_info1, cam_info2):
@@ -92,7 +94,7 @@ def depth2pointcloud(config, depth, cam_info, indices=[]):
     updated_voxel_pointcloud, updated_indices = remove_flat_areas(voxel_pointcloud, mapped_indices, area_size=config.render_d2p_flat_area)
     return updated_voxel_pointcloud, updated_indices
 
-def augment_point_cloud(points, aug_noise=0.008):
+def augment_point_cloud(points, aug_noise=0.01):
     points += (np.random.rand(points.shape[0], 3) - 0.5) * aug_noise
     return points
 
@@ -124,7 +126,7 @@ def save_point_cloud_to_numpy_and_pcd(point_cloud, file_path_base):
     """
     # 保存为 numpy 文件
     npy_file_path = file_path_base + ".npy"
-    np.save(npy_file_path, augment_point_cloud(point_cloud))
+    np.save(npy_file_path, point_cloud)
     
     # # 保存为 PCD 文件
     # pcd_file_path = file_path_base + ".pcd"

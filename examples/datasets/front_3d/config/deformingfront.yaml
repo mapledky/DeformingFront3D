@@ -66,7 +66,7 @@ render_furniture_nearby_to_cam: 1.3
 render_d2p_min_clip: 0.3
 render_d2p_max_clip: 6.0
 render_d2p_voxel_size: 0.025
-render_d2p_flat_area: 1.35
+render_d2p_flat_area: 1.25
 
-render_min_points: 3000
+render_min_points: 1000
 render_overlap_min: 0.1

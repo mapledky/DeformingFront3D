@@ -138,22 +138,28 @@ class FurnitureManage:
         if not self.target_furniture:
             print("No target furniture to move.")
             return
-        cam_loc = Vector(self.cam_location)
-         # Find furniture close to the camera
+        cam_loc = self.cam_location.copy()
+        # Find furniture close to the camera
         nearby_furniture = [obj for obj in self.target_furniture if np.linalg.norm(obj.get_location() - cam_loc) <= config.render_furniture_nearby_thrs]
         offset = config.render_furniture_nearby_loc_off
+        max_attempts = 100  # max iteration
         for obj in nearby_furniture:
             # Calculate a random offset
-            while True:
-                offset = Vector((random.uniform(-offset, offset), random.uniform(-offset, offset), 0))  # only move in x and y directions
-                new_loc = obj.get_location() + offset
+            attempts = 0
+            while attempts < max_attempts:
+                offset_loc = np.array([
+                    np.random.uniform(-offset, offset),
+                    np.random.uniform(-offset, offset),
+                    np.random.uniform(-0, 0),
+                ])
+                new_loc = obj.get_location() + offset_loc
                 distance = np.linalg.norm(new_loc - cam_loc)
                 if config.render_furniture_nearby_to_cam <= distance <= config.render_furniture_nearby_thrs:
                     break
-            
+                attempts += 1
             obj.set_location(new_loc)
-        print('moving furniture number ', len(nearby_furniture))
-        bpy.context.view_layer.update()  
+        print('Moving furniture number', len(nearby_furniture))
+        bpy.context.view_layer.update()
 
     def set_last(self):
         self.last_positions = [np.array(obj.get_location()) for obj in self.loaded_objects]
@@ -268,17 +274,19 @@ class MovingShapenetModels:
         for i in range(num_models_to_move):
             obj = self.loaded_objects[i]
             init_location = self.obj_location[i]
-            
-            # Add randomness to the offset
-            random_offset = np.array([
-                np.random.uniform(-config.render_shapenet_moving_dis, config.render_shapenet_moving_dis),
-                np.random.uniform(-config.render_shapenet_moving_dis, config.render_shapenet_moving_dis),
-                np.random.uniform(-config.render_shapenet_moving_dis, config.render_shapenet_moving_dis)
-            ])
-            new_location = init_location + random_offset
-
-            if np.linalg.norm(new_location - self.camera_location) < config.render_shapenet_moving_dis_to_cam:
-                continue
+            max_iteration = 100
+            attempts = 0
+            while attempts < max_iteration:
+                # Add randomness to the offset
+                random_offset = np.array([
+                    np.random.uniform(-config.render_shapenet_moving_dis, config.render_shapenet_moving_dis),
+                    np.random.uniform(-config.render_shapenet_moving_dis, config.render_shapenet_moving_dis),
+                    np.random.uniform(-config.render_shapenet_moving_dis, config.render_shapenet_moving_dis)
+                ])
+                new_location = init_location + random_offset
+                if np.linalg.norm(new_location - self.camera_location) < config.render_shapenet_moving_dis_to_cam:
+                    break
+                attempts += 1
             
             # Ensure the model's height is not below ground
             if new_location[2] < config.random_shapenet_min_h:

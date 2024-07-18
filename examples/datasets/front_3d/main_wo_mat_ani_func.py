@@ -17,7 +17,7 @@ from util.hdftorgb import save_normals_as_image, save_numpy_as_image
 from util.anime_renderer import AnimeRenderer , MultiAnimeRenderer, sample_points # 导入 AnimeRenderer 类
 from util.sameple_shapenet import sample_shapenet_obj, MovingShapenetModels, FurnitureManage
 from util.tools import check_name, compare_depth_maps,compute_back_indice, getcameralocation,compute_overlap, compute_frame_offset_similarity
-from util.pointcloud_tools import compute_rt, depth2pointcloud, save_point_cloud_to_numpy_and_pcd, transpoint, save_point_cloud_to_pcd
+from util.pointcloud_tools import compute_rt, depth2pointcloud, save_point_cloud_to_numpy_and_pcd, transpoint, save_point_cloud_to_pcd, augment_point_cloud
 
 def save_blend(file_path):
     os.makedirs(file_path, exist_ok=True)
@@ -301,6 +301,9 @@ def render_scenes_with_animations(config, front_path,
             src_pcd_back_indices = os.path.join(frame_output_dir, 'src_back_indices.json')
             ref_pcd_back_indices = os.path.join(frame_output_dir, 'ref_back_indices.json')
 
+            point_cloud_src_save = augment_point_cloud(pre_pc)
+            point_cloud_target_save = augment_point_cloud(transpoint(point_cloud_target, relative_transform))
+            point_cloud_target_wo_anim_save = augment_point_cloud(transpoint(point_cloud_target_wo_anim, relative_transform))
             np.save(gt_output_dir, relative_transform)
 
             src_back_indices = {
@@ -323,17 +326,17 @@ def render_scenes_with_animations(config, front_path,
             # frame_output_dir_src_wo = os.path.join(frame_output_dir, 'src_wo_fore')
 
             #save_point_cloud_to_pcd(pre_pc_wo_fore,frame_output_dir_src_wo)
-            save_point_cloud_to_pcd(pre_pc,frame_output_dir_src )
+            save_point_cloud_to_pcd(point_cloud_src_save,frame_output_dir_src )
 
             frame_output_dir_ref = os.path.join(frame_output_dir, 'ref')
             frame_output_dir_ref_wo_anim = os.path.join(frame_output_dir, 'ref_wo_anim')
 
-            save_point_cloud_to_numpy_and_pcd(pre_pc,frame_output_dir_src )
+            save_point_cloud_to_numpy_and_pcd(point_cloud_src_save,frame_output_dir_src )
 
-            save_point_cloud_to_numpy_and_pcd(transpoint(point_cloud_target, relative_transform),frame_output_dir_ref )
-            save_point_cloud_to_numpy_and_pcd(transpoint(point_cloud_target_wo_anim, relative_transform),frame_output_dir_ref_wo_anim )
+            save_point_cloud_to_numpy_and_pcd(point_cloud_target_save,frame_output_dir_ref )
+            save_point_cloud_to_numpy_and_pcd(point_cloud_target_wo_anim_save,frame_output_dir_ref_wo_anim )
 
-            save_point_cloud_to_pcd(transpoint(point_cloud_target, relative_transform),frame_output_dir_ref )
+            save_point_cloud_to_pcd(point_cloud_target_save,frame_output_dir_ref )
             #save_point_cloud_to_pcd(transpoint(point_cloud_target_wo_anim, relative_transform),frame_output_dir_ref_wo_anim )
 
             #save_blend(os.path.join(frame_output_dir, 'ref.blend'))

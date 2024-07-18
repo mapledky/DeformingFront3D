@@ -91,7 +91,7 @@ def getcameralocation(config, center_location, camera_location):
     
     return cam2world_matrix
 
-def compute_overlap(pc1, pc2, voxel_size=0.0375):
+def compute_overlap(pc1, pc2, voxel_size=0.1):
     def voxelize(pc, voxel_size):
         voxel_grid = np.floor(pc / voxel_size).astype(np.int32)
         return voxel_grid
