@@ -9,6 +9,7 @@ import random
 import json
 from mathutils import Matrix, Vector, Euler
 import time
+import shutil
 import math
 
 sys.path.append('code/BlenderProc/examples/datasets/front_3d/util')
@@ -32,7 +33,9 @@ def render_scenes_with_animations(config, front_path,
                                    shapenet_json="",
                                    flow_skip=4):
     bproc.init()
+    scene_ouput_dir = os.path.join(output_dir, "scene",  str(int(time.time() * 1000)))
     output_dir = os.path.join(output_dir, "rawdata")
+    scene_render = False
     if not os.path.exists(front_path) or not os.path.exists(future_folder):
         raise Exception("One of the necessary folders does not exist!")
 
@@ -52,7 +55,8 @@ def render_scenes_with_animations(config, front_path,
 
     if not sample_shapenet_obj(config, loaded_objects,shapenet_json , shapenet_folder):
         return
-    furniture_manager = FurnitureManage(config, loaded_objects)
+    if config.ablation >= 3:
+        furniture_manager = FurnitureManage(config, loaded_objects)
 
     point_sampler = bproc.sampler.Front3DPointInRoomSampler(loaded_objects)
     bvh_tree = bproc.object.create_bvh_tree_multi_objects([o for o in loaded_objects if isinstance(o, bproc.types.MeshObject)])
@@ -119,12 +123,14 @@ def render_scenes_with_animations(config, front_path,
         model_location.z = -0.05
 
         #place shapenet models in front of camera
-        movingshapenet = MovingShapenetModels(config, model_location,cam_location, shapenet_json, shapenet_folder)
+        if config.ablation >= 3:
+            movingshapenet = MovingShapenetModels(config, model_location,cam_location, shapenet_json, shapenet_folder)
         bpy.context.view_layer.update()
         #init_furniture_cam
         cam_loc_tem = cam_location
         cam_loc_tem[2] = 0.0
-        furniture_manager.set_cam_loc(cam_loc_tem)
+        if config.ablation >= 3:
+            furniture_manager.set_cam_loc(cam_loc_tem)
 
         print("anime render")
         # Initialize animation renderer
@@ -191,8 +197,10 @@ def render_scenes_with_animations(config, front_path,
 
             #render background
             anime_renderer.invisible_anim()
-            movingshapenet.invisible_all()
-            furniture_manager.invisible_all()
+            if config.ablation >= 3:
+                movingshapenet.invisible_all()
+            if config.ablation >= 3:
+                furniture_manager.invisible_all()
             if multi:
                 multi_anime_renderer.invisible_anim()
 
@@ -217,8 +225,10 @@ def render_scenes_with_animations(config, front_path,
                 continue
             neglect_proportion = 0
             #render full scene
-            movingshapenet.visible_all()
-            furniture_manager.visible_all()
+            if config.ablation >= 3:
+                movingshapenet.visible_all()
+            if config.ablation >= 3:
+                furniture_manager.visible_all()
             if multi:
                 multi_anime_renderer.visible_anim()
 
@@ -227,8 +237,10 @@ def render_scenes_with_animations(config, front_path,
                 data_wo_anim = bproc.renderer.render()
             anime_renderer.vis_frame(frame)
             # moving shapenet around human and moving furniture around human randomly
-            movingshapenet.moving()
-            furniture_manager.randommoving()
+            if config.ablation >= 3:
+                movingshapenet.moving()
+            if config.ablation >= 3:
+                furniture_manager.randommoving()
             if multi:
                 multi_anime_renderer.vis_frame(multi_frame)
 
@@ -255,8 +267,12 @@ def render_scenes_with_animations(config, front_path,
                 pre_frame = data
                 pre_cam_info = cam_info
                 pre_multi_frame = multi_frame
-                movingshapenet.set_last()
-                furniture_manager.set_last()   
+                if config.ablation >= 3:
+                    movingshapenet.set_last()
+                if config.ablation >= 3:
+                    furniture_manager.set_last()   
+                if config.save_blend:
+                    save_blend(os.path.join(scene_ouput_dir, 'src.blend'))
                 continue
             
             #conpute back indices
@@ -271,8 +287,10 @@ def render_scenes_with_animations(config, front_path,
 
             if point_cloud_target.shape[0] < config.render_min_points:
                 print("neglect serious burden or enormous!!!!")
-                furniture_manager.last_location()
-                movingshapenet.last_location()
+                if config.ablation >= 3:
+                    furniture_manager.last_location()
+                if config.ablation >= 3:    
+                    movingshapenet.last_location()
                 if multi:
                     multi_anime_renderer.vis_frame(pre_multi_frame)
                 continue
@@ -282,8 +300,10 @@ def render_scenes_with_animations(config, front_path,
             if overlap_ratio_pc1 < 0.1 and overlap_ratio_pc2 < 0.1:
                 print('neglect too small overlap ratio !!!')
                 neglect_overlap += 1
-                furniture_manager.last_location()
-                movingshapenet.last_location()
+                if config.ablation >= 3:
+                    furniture_manager.last_location()
+                if config.ablation >= 3:
+                    movingshapenet.last_location()
                 if multi:
                     multi_anime_renderer.vis_frame(pre_multi_frame)
                 continue
@@ -339,7 +359,10 @@ def render_scenes_with_animations(config, front_path,
             save_point_cloud_to_pcd(point_cloud_target_save,frame_output_dir_ref )
             #save_point_cloud_to_pcd(transpoint(point_cloud_target_wo_anim, relative_transform),frame_output_dir_ref_wo_anim )
 
-            #save_blend(os.path.join(frame_output_dir, 'ref.blend'))
+            if not scene_render and config.save_blend:
+                save_blend(os.path.join(scene_ouput_dir, 'ref.blend'))
+                scene_render = True
+
             pre_frame_num = frame
             pre_cam_info = cam_info
             pre_frame = data
@@ -347,13 +370,19 @@ def render_scenes_with_animations(config, front_path,
             pre_pc = point_cloud_target
             pre_back_indices = back_indices
             pre_pc_wo_fore = point_cloud_target_wo_fore
-            furniture_manager.set_last()
-            movingshapenet.set_last()
+            if config.ablation >= 3:
+                furniture_manager.set_last()
+            if config.ablation >= 3:
+                movingshapenet.set_last()
             pre_multi_frame = multi_frame
 
         anime_renderer.invisible_anim()
         if multi:
             multi_anime_renderer.invisible_anim()
-        movingshapenet.delete_all_model()
+        if config.ablation >= 3:
+            movingshapenet.delete_all_model()
 
     bproc.clean_up()
+    if not scene_render and config.save_blend:
+        if os.path.exists(scene_ouput_dir) and os.path.isdir(scene_ouput_dir):
+            shutil.rmtree(scene_ouput_dir)

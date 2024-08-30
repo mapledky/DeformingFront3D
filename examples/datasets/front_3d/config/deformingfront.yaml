@@ -7,7 +7,7 @@ shapenet_folder: dataset/ShapeNetCore.v2
 shapenet_json: code/BlenderProc/examples/datasets/front_3d/config/shape.json
 dt4_json: code/BlenderProc/examples/datasets/front_3d/config/dt4.json
 
-output_dir: dataset/3D-Deforming-FRONT-v5
+output_dir: dataset/3D-Deforming-FRONT-v5_show
 
 flow_skip: 4
 anime_per_scene: 36
@@ -66,7 +66,10 @@ render_furniture_nearby_to_cam: 1.3
 render_d2p_min_clip: 0.3
 render_d2p_max_clip: 6.0
 render_d2p_voxel_size: 0.025
-render_d2p_flat_area: 1.25
+render_d2p_flat_area: 5.0
 
-render_min_points: 1000
+render_min_points: 6000
 render_overlap_min: 0.1
+
+ablation: 3
+save_blend: False
